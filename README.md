@@ -72,7 +72,7 @@ node tools/package.mjs
 ```
 index.html            page shell + the Minit audio repair (read the comment)
 src/main.js           SDK lifecycle, scoring, HUD — the part worth copying
-src/scene.js          the 3D scene: camera, lights, meshes, camera-derived bounds
+src/scene.js          the 3D scene: camera, lights, meshes, fixed-design-surface bounds
 src/audio.js          one AudioContext: the music loop and synthesised effects
 src/assets/music.js   generated — the loop, as inlined mu-law bytes
 public/meta.json      title, controls, logic, description, config knobs
@@ -93,12 +93,17 @@ If the scene looks unlit, check the units before moving the lights.
 ground plane ends also drained the clouds to the same flat blue until their
 material was given `fog: false`.
 
-**The ball's bounds come from the camera, never from a number.** How much world
-fits across the screen depends on the field of view, on how far the ball is from
-the camera, and on the aspect ratio of a slot whose shape the host decides. A
-hardcoded limit is wrong on some viewport — `sideLimit()` and `ceilingY()`
-project it each frame, with a margin slightly over the ball's radius because a
-sphere's silhouette under perspective is wider than its centre-plane radius.
+**The ball's bounds come from a fixed design surface, not the live camera
+aspect.** `sideLimit()` and `ceilingY()` size the play area from the fixed
+960×1480 design aspect (`BASE_ASPECT`) and the authored `BASE_FOV`, projected
+each frame with a margin slightly over the ball's radius because a sphere's
+silhouette under perspective is wider than its centre-plane radius.
+`camera.aspect` still tracks the live viewport every resize — the renderer
+keeps filling the whole screen, undistorted — but `effectiveFov()` is the only
+thing that ever widens the vertical FOV, and only for a device narrower than
+the design past a 5% crop tolerance; a device wider than the design never
+needs it. See "Platform rules" below for the full convention and its
+canonical source.
 
 ## The three calls that matter
 
@@ -205,9 +210,24 @@ Most are enforced by `tools/check-meta.mjs`, which runs on every build.
   instead, and fails on anything off-origin.
 - **Touch only.** Pointer events throughout, tap targets past 44 px, no hover
   and no keyboard.
-- **Portrait, any aspect ratio.** The app's slot is nearer 2:3 than the 9:18 a
-  phone screen suggests, and differs again on the web player — so nothing is
-  hardcoded and the layout is measured from the live viewport.
+- **Portrait, one fixed 960×1480 design surface, cover-or-fit via camera FOV.**
+  The app's slot is nearer 2:3 than the 9:18 a phone screen suggests, and
+  differs again on the web player, so `src/scene.js` authors the ball's bounds
+  against a single fixed design aspect (`BASE_ASPECT = 960/1480`) rather than
+  deriving them from the live viewport. Unlike the Pixi/Phaser/vanilla
+  templates, Three.js has no CSS wrapper to scale — the renderer/canvas still
+  fill the live viewport 1:1 (a hard requirement) and `camera.aspect` always
+  tracks it, undistorted. What the fixed design surface instead governs is the
+  camera's vertical field of view: `effectiveFov()` keeps the authored
+  `BASE_FOV` (and so the design's play-area bounds) unchanged up to a 5% crop
+  on a narrower-than-design device, then widens it just enough that the live
+  render's width catches up to the design's fixed half-width exactly — a "fit"
+  that reveals extra headroom rather than letting the ball drift off-screen. A
+  wider-than-design device never crops, so it never needs the adjustment. This
+  is the Minit Games **recommended** layout convention, not an unconditional
+  platform requirement; the canonical source is the `@minit-games/sdk` package
+  README's own "Screen, viewport, and scaling" section:
+  [Minit-Games/minit-sdk § "Screen, viewport, and scaling"](https://github.com/Minit-Games/minit-sdk#screen-viewport-and-scaling).
 
 ## Regenerating the music
 

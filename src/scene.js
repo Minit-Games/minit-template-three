@@ -24,7 +24,40 @@ const TAP_IMPULSE = 11.5;
 const REST_SPEED = 0.4;
 const BALL_RADIUS = 0.62;
 const REST_Y = BALL_RADIUS * 0.85;   // nestled into the grass rather than on it
-const FOV = 46;
+const BASE_W = 960;
+const BASE_H = 1480;
+const BASE_ASPECT = BASE_W / BASE_H;   // fixed 960:1480 design-surface aspect
+const MAX_CROP = 0.05;                 // SDK README's own crop tolerance
+const BASE_FOV = 46;                   // vertical FOV (degrees), authored for the design surface
+
+/**
+ * Cover-then-fit, in FOV terms -- the 3D analog of the 2D CSS-transform
+ * scaler's cover/fit branch described in the @minit-games/sdk README's
+ * "Screen, viewport, and scaling" section. There is no CSS wrapper to scale
+ * here: the renderer always fills the live viewport 1:1 (unchanged,
+ * required), and camera.aspect always tracks it so nothing distorts. What
+ * the fixed 960:1480 design surface instead governs is the camera's
+ * vertical field of view, which in turn drives how much of the world
+ * halfExtents() (and so sideLimit()/ceilingY()) exposes.
+ *
+ * A device narrower than the design (liveAspect < BASE_ASPECT -- most
+ * phones) renders LESS width at BASE_FOV than the design's fixed
+ * half-width. Tolerate that as a crop up to MAX_CROP (the SDK's own 5%
+ * allowance), then widen the FOV just enough that the live render's actual
+ * width catches up to the design's fixed half-width exactly -- a "fit": no
+ * more horizontal crop, extra vertical headroom revealed instead. A device
+ * wider than the design (liveAspect >= BASE_ASPECT) already renders MORE
+ * width than the design needs at BASE_FOV, so nothing is ever cropped
+ * there and the FOV never needs to change.
+ */
+function effectiveFov(viewportAspect) {
+	if (viewportAspect >= BASE_ASPECT) { return BASE_FOV; }
+	const crop = 1 - viewportAspect / BASE_ASPECT;
+	if (crop <= MAX_CROP) { return BASE_FOV; }
+	const baseHalfH = Math.tan((BASE_FOV * Math.PI) / 360);
+	const fitHalfH = baseHalfH * (BASE_ASPECT / viewportAspect);
+	return (360 / Math.PI) * Math.atan(fitHalfH);
+}
 
 export function createScene(canvas, { onTap, onBounce }) {
 	const renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -38,7 +71,7 @@ export function createScene(canvas, { onTap, onBounce }) {
 	// rather than a visible edge.
 	scene.fog = new Fog(skyColor, 30, 120);
 
-	const camera = new PerspectiveCamera(FOV, 1, 0.1, 400);
+	const camera = new PerspectiveCamera(BASE_FOV, 1, 0.1, 400);
 	// Where the horizon lands is set by the camera's pitch, not by any fraction
 	// of the screen: pitching DOWN raises it, pitching UP lowers it. This puts
 	// it a little past 60% of the way down.
@@ -125,6 +158,7 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 		renderer.setSize(W, H, false);
 		camera.aspect = W / H;
+		camera.fov = effectiveFov(camera.aspect);
 		camera.updateProjectionMatrix();
 	}
 
@@ -141,11 +175,17 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 
 	function halfExtents(y) {
 		const depth = depthAt(y);
-		const halfH = Math.tan((FOV * Math.PI) / 360) * depth;
-		// fov is vertical, so the horizontal extent is that times the aspect --
-		// and on a portrait slot the aspect is below 1, which makes horizontal
-		// the tighter of the two.
-		return { depth, halfH, halfW: halfH * (camera.aspect || 1) };
+		const halfH = Math.tan((camera.fov * Math.PI) / 360) * depth;
+		// Horizontal half-extent is always derived from the FIXED 960:1480
+		// design aspect and the authored BASE_FOV, never from the live
+		// camera.aspect -- that is what keeps sideLimit()/ceilingY() tied to a
+		// fixed design surface rather than a live-viewport-responsive one.
+		// Within MAX_CROP this can run up to 5% past what a narrow device
+		// actually renders (tolerated crop, matching the SDK's own convention);
+		// effectiveFov() widens camera.fov beyond that so the two catch up
+		// exactly at the crop cap -- see its own doc comment above.
+		const halfW = Math.tan((BASE_FOV * Math.PI) / 360) * depth * BASE_ASPECT;
+		return { depth, halfH, halfW };
 	}
 
 	/** A little more than the radius: a sphere's silhouette under perspective
