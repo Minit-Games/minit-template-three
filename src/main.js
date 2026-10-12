@@ -112,12 +112,12 @@ function endGame() {
 		? `Best rally: ${bestRally} taps without a bounce`
 		: `${bounces} bounce${bounces === 1 ? '' : 's'} off the grass`;
 
-	reportResult(score, { flavorText, userData: 'played' });
+	reportResult(score, { flavorText });
 }
 
 /* ---- tutorial ---------------------------------------------------------
-   Gated by the host's userData: a returning player has a value stored and
-   never sees it again. Gesture over text. */
+   The host decides who has played before, so the game stores nothing to
+   gate it. Gesture over text. */
 let tutorial = null;
 let finger = null;
 if (shouldShowTutorial()) {
