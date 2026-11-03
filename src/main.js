@@ -35,7 +35,7 @@ const deviceTier = typeof sdk.getDeviceTier === 'function'
 	? sdk.getDeviceTier()
 	: 'unknown';
 const effects = {
-	pixelRatioCap: deviceTier === 'low' ? 1 : deviceTier === 'medium' ? 1.5 : 2,
+	pixelRatioCap: deviceTier === 'low' ? 1 : deviceTier === 'high' ? 2 : 1.5,
 	shadows: deviceTier !== 'low' && motionQuality !== 'reduced',
 	cloudMotion: motionQuality !== 'reduced' && !reducedMotion,
 };

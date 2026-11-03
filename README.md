@@ -159,10 +159,13 @@ preference. Try it locally with:
 ```
 http://localhost:5173/?motionQuality=reduced
 http://localhost:5173/?deviceTier=low
+http://localhost:5173/?reducedMotion=1
 ```
 
-Until `@minit-games/sdk` is 1.19.0 or newer, the example falls back to the
-browser's reduced-motion preference. See [Device-Adaptive Effects](https://minit.studio/docs/device-adaptive-effects).
+On an SDK without these getters, the example falls back to the browser's
+reduced-motion setting. The `?motionQuality=reduced`, `?deviceTier=low`, and
+`?reducedMotion=1` URL overrides take effect once the SDK provides the getters.
+See [Device-Adaptive Effects](https://minit.studio/docs/device-adaptive-effects).
 
 ## Audio, and why index.html is the way it is
 
