@@ -150,6 +150,23 @@ http://localhost:5173/?pointsPerTap=25&music=false
 `npm run build` cross-checks the declared keys against the ones the bundle
 actually reads, in both directions.
 
+## Device-adaptive effects
+
+The example in `src/main.js` adapts the renderer pixel ratio, shadows, and
+drifting clouds to the device tier, motion quality, and reduced-motion
+preference. Try it locally with:
+
+```
+http://localhost:5173/?motionQuality=reduced
+http://localhost:5173/?deviceTier=low
+http://localhost:5173/?reducedMotion=1
+```
+
+On an SDK without these getters, the example falls back to the browser's
+reduced-motion setting. The `?motionQuality=reduced`, `?deviceTier=low`, and
+`?reducedMotion=1` URL overrides take effect once the SDK provides the getters.
+See [Device-Adaptive Effects](https://minit.studio/docs/device-adaptive-effects).
+
 ## Audio, and why index.html is the way it is
 
 A game can be perfectly healthy — context running, engine mixing, buffers
