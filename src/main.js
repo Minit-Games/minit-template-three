@@ -11,6 +11,7 @@
    begin", no replay menu -- the host owns both ends.
    ========================================================================== */
 import { initializeSDK, getConfigValue, reportResult, loadingDone } from '@minit-games/sdk';
+import * as sdk from '@minit-games/sdk';
 import {
 	createHeaderBar, showPositiveFeedback, showNeutralFeedback, preloadFeedbackFont,
 	spawnRewards, shouldShowTutorial, createTutorialOverlay,
@@ -20,6 +21,24 @@ import { createScene } from './scene.js';
 import { createAudio } from './audio.js';
 
 initializeSDK();
+
+/* ---- device-adaptive effects ----------------------------------------- */
+const browserPrefersReducedMotion = typeof window.matchMedia === 'function'
+	&& window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionQuality = typeof sdk.getMotionQuality === 'function'
+	? sdk.getMotionQuality()
+	: browserPrefersReducedMotion ? 'reduced' : 'full';
+const reducedMotion = typeof sdk.prefersReducedMotion === 'function'
+	? sdk.prefersReducedMotion()
+	: browserPrefersReducedMotion;
+const deviceTier = typeof sdk.getDeviceTier === 'function'
+	? sdk.getDeviceTier()
+	: 'unknown';
+const effects = {
+	pixelRatioCap: deviceTier === 'low' ? 1 : deviceTier === 'medium' ? 1.5 : 2,
+	shadows: deviceTier !== 'low' && motionQuality !== 'reduced',
+	cloudMotion: motionQuality !== 'reduced' && !reducedMotion,
+};
 
 /* ---- config ----------------------------------------------------------
    Config values always arrive as strings -- the host appends every declared
@@ -52,6 +71,7 @@ const scorePanel = header.addPanel({ label: 'Score', value: 0, align: 'right' })
 preloadFeedbackFont();
 
 const scene = createScene(canvas, {
+	effects,
 	onTap() {
 		rally++;
 		if (rally > bestRally) { bestRally = rally; }

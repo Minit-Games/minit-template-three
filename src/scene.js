@@ -59,9 +59,9 @@ function effectiveFov(viewportAspect) {
 	return (360 / Math.PI) * Math.atan(fitHalfH);
 }
 
-export function createScene(canvas, { onTap, onBounce }) {
+export function createScene(canvas, { effects, onTap, onBounce }) {
 	const renderer = new WebGLRenderer({ canvas, antialias: true });
-	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.enabled = effects.shadows;
 	renderer.shadowMap.type = PCFSoftShadowMap;
 
 	const scene = new Scene();
@@ -87,7 +87,7 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 	// leaves the face the player is looking at unlit; coming in too low throws
 	// the shadow half a screen away from the ball it belongs to.
 	sun.position.set(-3.5, 8, 6);
-	sun.castShadow = true;
+	sun.castShadow = effects.shadows;
 	sun.shadow.mapSize.set(1024, 1024);
 	sun.shadow.camera.near = 0.5;
 	sun.shadow.camera.far = 40;
@@ -100,7 +100,7 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 		new MeshStandardMaterial({ color: 0x4aa032, roughness: 1 }),
 	);
 	ground.rotation.x = -Math.PI / 2;
-	ground.receiveShadow = true;
+	ground.receiveShadow = effects.shadows;
 	scene.add(ground);
 
 	const ball = new Mesh(
@@ -108,7 +108,7 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 		new MeshStandardMaterial({ color: 0xd6323f, roughness: 0.35, metalness: 0.05 }),
 	);
 	ball.position.set(0, REST_Y, 0);
-	ball.castShadow = true;
+	ball.castShadow = effects.shadows;
 	scene.add(ball);
 
 	// Clouds: flattened spheres, unlit so they stay bright against the sky.
@@ -155,7 +155,7 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 		H = Math.round(vv ? vv.height : document.documentElement.clientHeight);
 		// Cap the pixel ratio: a 3x buffer costs real frame time on a phone and
 		// buys nothing visible on shapes this simple.
-		renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+		renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, effects.pixelRatioCap));
 		renderer.setSize(W, H, false);
 		camera.aspect = W / H;
 		camera.fov = effectiveFov(camera.aspect);
@@ -236,9 +236,11 @@ scene.add(new HemisphereLight(0xbcd8f0, 0x4f8d34, 2.2));
 		spin += velocity.x * dt * 1.6;
 		ball.rotation.z = -spin;
 
-		for (const puff of clouds.children) {
-			puff.position.x += puff.userData.speed * dt;
-			if (puff.position.x > 45) { puff.position.x = -45; }
+		if (effects.cloudMotion) {
+			for (const puff of clouds.children) {
+				puff.position.x += puff.userData.speed * dt;
+				if (puff.position.x > 45) { puff.position.x = -45; }
+			}
 		}
 	}
 
