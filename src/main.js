@@ -136,7 +136,12 @@ let remaining = ROUND_SECONDS;
 let shownSecond = ROUND_SECONDS;
 
 function frame(now) {
-	const raw = (now - last) / 1000;
+	// Never negative. The first rAF timestamp is the frame's start time and can
+	// be EARLIER than the performance.now() taken at module load -- seen in the
+	// Studio's iframe preview. A negative delta runs the clock backwards, and
+	// anything sized from it (a radius, a scale) can throw on the first frame,
+	// before loadingDone() is ever sent.
+	const raw = Math.max(0, (now - last) / 1000);
 	last = now;
 	// Physics gets a hard clamp: a backgrounded tab returns with a huge delta,
 	// which would teleport the ball through the ground on the first frame back.
