@@ -21,7 +21,7 @@ npm run dev        # local dev server
 npm run package    # build, verify, and write dist/minit-template-three.zip
 ```
 
-Upload `dist/minit-template-three.zip` at [console.minit.games](https://console.minit.games).
+Upload `dist/minit-template-three.zip` at [minit.studio](https://minit.studio).
 
 **Size.** ~890 KB built (371 KB gzipped), most of it the engine and the music.
 
